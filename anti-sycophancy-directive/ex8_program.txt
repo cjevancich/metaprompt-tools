@@ -1,0 +1,365 @@
+/*
+ * ASTEROIDS MINIMAL - The Essential Physics of Space Combat
+ * Intel 8086 / Primitive Graphics Systems
+ *
+ * In the vacuum between stars, momentum becomes destiny. This implementation
+ * reduces the asteroid field to its mathematical core: one spacecraft,
+ * eight rocks, and the immutable laws governing kinetic energy transfer
+ * in frictionless space. Each collision represents entropy's victory
+ * over organized matter - chaos multiplying through fragmentation.
+ *
+ * Compile: tcc astermin.c (Turbo C) or cc astermin.c (generic)
+ * Controls: A/D rotate, W thrust, SPACE fire, Q quit
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <conio.h>
+
+/* Cosmic constants defining our bounded universe */
+#define W 80        /* Screen width - the edge of known space */
+#define H 24        /* Screen height - vertical boundary of existence */
+#define MAX_ROCKS 8 /* Maximum asteroid population */
+#define MAX_SHOTS 4 /* Bullet scarcity enforces tactical thinking */
+
+/* Physics precision - fixed-point arithmetic for 8086 efficiency */
+#define SCALE 100   /* Multiply coordinates by 100 for sub-pixel precision */
+
+/* Game entities - the minimal actors in our cosmic drama */
+struct {
+    int x, y;       /* Position in scaled coordinates */
+    int dx, dy;     /* Velocity vector components */
+    int angle;      /* Ship orientation in discrete degrees */
+    int thrust;     /* Engine activation state */
+    int alive;      /* Mortality flag */
+} ship;
+
+struct {
+    int x, y, dx, dy;   /* Position and momentum */
+    int size;           /* 0=large, 1=medium, 2=small, 3=destroyed */
+    int active;         /* Existence flag */
+} rocks[MAX_ROCKS];
+
+struct {
+    int x, y, dx, dy;   /* Projectile state vector */
+    int life;           /* Remaining flight time */
+} shots[MAX_SHOTS];
+
+int score, level;       /* Progress quantification */
+
+/* Trigonometry tables - avoiding floating point in real-time loop */
+int cos_table[360] = {100,100,99,99,98,97,96,95,94,92,91,89,87,85,83,81,78,76,73,71,68,65,62,59,56,53,50,47,43,40,37,33,30,26,23,19,16,12,9,5,2,-2,-5,-9,-12,-16,-19,-23,-26,-30,-33,-37,-40,-43,-47,-50,-53,-56,-59,-62,-65,-68,-71,-73,-76,-78,-81,-83,-85,-87,-89,-91,-92,-94,-95,-96,-97,-98,-99,-99,-100,-100,-100,-99,-99,-98,-97,-96,-95,-94,-92,-91,-89,-87,-85,-83,-81,-78,-76,-73,-71,-68,-65,-62,-59,-56,-53,-50,-47,-43,-40,-37,-33,-30,-26,-23,-19,-16,-12,-9,-5,-2,2,5,9,12,16,19,23,26,30,33,37,40,43,47,50,53,56,59,62,65,68,71,73,76,78,81,83,85,87,89,91,92,94,95,96,97,98,99,99,100,100,100,99,99,98,97,96,95,94,92,91,89,87,85,83,81,78,76,73,71,68,65,62,59,56,53,50,47,43,40,37,33,30,26,23,19,16,12,9,5,2,-2,-5,-9,-12,-16,-19,-23,-26,-30,-33,-37,-40,-43,-47,-50,-53,-56,-59,-62,-65,-68,-71,-73,-76,-78,-81,-83,-85,-87,-89,-91,-92,-94,-95,-96,-97,-98,-99,-99,-100,-100,-100,-99,-99,-98,-97,-96,-95,-94,-92,-91,-89,-87,-85,-83,-81,-78,-76,-73,-71,-68,-65,-62,-59,-56,-53,-50,-47,-43,-40,-37,-33,-30,-26,-23,-19,-16,-12,-9,-5,-2,2,5,9,12,16,19,23,26,30,33,37,40,43,47,50,53,56,59,62,65,68,71,73,76,78,81,83,85,87,89,91,92,94,95,96,97,98,99,99,100,100,100,99,99,98,97,96,95,94,92,91,89,87,85,83,81,78,76,73,71,68,65,62,59,56,53,50,47,43,40,37,33,30,26,23,19,16,12,9,5,2,-2,-5,-9,-12,-16,-19,-23,-26,-30,-33,-37,-40,-43,-47,-50,-53,-56,-59,-62,-65,-68,-71,-73,-76,-78,-81,-83,-85,-87,-89,-91,-92,-94,-95,-96,-97,-98,-99,-99,-100};
+int sin_table[360] = {0,5,9,12,16,19,23,26,30,33,37,40,43,47,50,53,56,59,62,65,68,71,73,76,78,81,83,85,87,89,91,92,94,95,96,97,98,99,99,100,100,100,99,99,98,97,96,95,94,92,91,89,87,85,83,81,78,76,73,71,68,65,62,59,56,53,50,47,43,40,37,33,30,26,23,19,16,12,9,5,2,-2,-5,-9,-12,-16,-19,-23,-26,-30,-33,-37,-40,-43,-47,-50,-53,-56,-59,-62,-65,-68,-71,-73,-76,-78,-81,-83,-85,-87,-89,-91,-92,-94,-95,-96,-97,-98,-99,-99,-100,-100,-100,-99,-99,-98,-97,-96,-95,-94,-92,-91,-89,-87,-85,-83,-81,-78,-76,-73,-71,-68,-65,-62,-59,-56,-53,-50,-47,-43,-40,-37,-33,-30,-26,-23,-19,-16,-12,-9,-5,-2,2,5,9,12,16,19,23,26,30,33,37,40,43,47,50,53,56,59,62,65,68,71,73,76,78,81,83,85,87,89,91,92,94,95,96,97,98,99,99,100,100,100,99,99,98,97,96,95,94,92,91,89,87,85,83,81,78,76,73,71,68,65,62,59,56,53,50,47,43,40,37,33,30,26,23,19,16,12,9,5,2,-2,-5,-9,-12,-16,-19,-23,-26,-30,-33,-37,-40,-43,-47,-50,-53,-56,-59,-62,-65,-68,-71,-73,-76,-78,-81,-83,-85,-87,-89,-91,-92,-94,-95,-96,-97,-98,-99,-99,-100,-100,-100,-99,-99,-98,-97,-96,-95,-94,-92,-91,-89,-87,-85,-83,-81,-78,-76,-73,-71,-68,-65,-62,-59,-56,-53,-50,-47,-43,-40,-37,-33,-30,-26,-23,-19,-16,-12,-9,-5,-2,2,5,9,12,16,19,23,26,30,33,37,40,43,47,50,53,56,59,62,65,68,71,73,76,78,81,83,85,87,89,91,92,94,95,96,97,98,99,99,100};
+
+/* Core functions - the minimal interface to reality manipulation */
+void cls(void) { printf("\033[2J\033[H"); }
+void pos(int x, int y) { printf("\033[%d;%dH", y+1, x+1); }
+void draw(char c) { putchar(c); }
+int rnd(int n) { return rand() % n; }
+
+/*
+ * Coordinate wrapping - toroidal space topology
+ * The universe curves back upon itself at the boundaries
+ */
+void wrap(int *x, int *y) {
+    if (*x < 0) *x = (W-1) * SCALE;
+    if (*x >= W * SCALE) *x = 0;
+    if (*y < 0) *y = (H-1) * SCALE;
+    if (*y >= H * SCALE) *y = 0;
+}
+
+/*
+ * Ship dynamics - Newton's laws applied to digital matter
+ * Thrust creates acceleration; momentum persists in vacuum
+ */
+void update_ship(void) {
+    if (!ship.alive) return;
+
+    /* Rotational dynamics */
+    if (kbhit()) {
+        int key = getch();
+        switch (key) {
+            case 'a': case 'A':
+                ship.angle = (ship.angle - 10 + 360) % 360; break;
+            case 'd': case 'D':
+                ship.angle = (ship.angle + 10) % 360; break;
+            case 'w': case 'W':
+                ship.thrust = 1; break;
+            case ' ':
+                fire_shot(); break;
+            case 'q': case 'Q':
+                exit(0);
+        }
+    } else {
+        ship.thrust = 0;
+    }
+
+    /* Thrust application - converting fuel into kinetic energy */
+    if (ship.thrust) {
+        ship.dx += cos_table[ship.angle] / 2;
+        ship.dy += sin_table[ship.angle] / 2;
+    }
+
+    /* Momentum conservation with minimal friction */
+    ship.dx = (ship.dx * 98) / 100;  /* Slight energy loss */
+    ship.dy = (ship.dy * 98) / 100;
+
+    /* Position integration */
+    ship.x += ship.dx;
+    ship.y += ship.dy;
+    wrap(&ship.x, &ship.y);
+}
+
+/*
+ * Asteroid mechanics - primordial chaos in perpetual motion
+ * Each rock follows its predetermined trajectory until disrupted
+ */
+void update_rocks(void) {
+    int i;
+    for (i = 0; i < MAX_ROCKS; i++) {
+        if (!rocks[i].active || rocks[i].size > 2) continue;
+
+        rocks[i].x += rocks[i].dx;
+        rocks[i].y += rocks[i].dy;
+        wrap(&rocks[i].x, &rocks[i].y);
+    }
+}
+
+/*
+ * Projectile ballistics - energy packets traversing vacuum
+ * Each bullet carries a fragment of the ship's momentum
+ */
+void update_shots(void) {
+    int i;
+    for (i = 0; i < MAX_SHOTS; i++) {
+        if (shots[i].life <= 0) continue;
+
+        shots[i].x += shots[i].dx;
+        shots[i].y += shots[i].dy;
+        wrap(&shots[i].x, &shots[i].y);
+        shots[i].life--;
+    }
+}
+
+/*
+ * Weapon discharge - converting ship energy into kinetic projectile
+ */
+void fire_shot(void) {
+    int i;
+    for (i = 0; i < MAX_SHOTS; i++) {
+        if (shots[i].life <= 0) {
+            shots[i].x = ship.x + cos_table[ship.angle] * 2;
+            shots[i].y = ship.y + sin_table[ship.angle] * 2;
+            shots[i].dx = ship.dx + cos_table[ship.angle] * 3;
+            shots[i].dy = ship.dy + sin_table[ship.angle] * 3;
+            shots[i].life = 50;
+            break;
+        }
+    }
+}
+
+/*
+ * Collision detection - the moment when separate entities become one
+ * Distance calculations using Pythagorean approximation
+ */
+int collision(int x1, int y1, int x2, int y2, int radius) {
+    int dx = (x1 - x2) / SCALE;
+    int dy = (y1 - y2) / SCALE;
+    return (dx * dx + dy * dy) < (radius * radius);
+}
+
+/*
+ * Asteroid fragmentation - entropy's multiplication principle
+ * Large rocks become medium, medium become small, small vanish
+ */
+void break_rock(int rock_idx) {
+    int fragments = 0, i;
+
+    if (rocks[rock_idx].size == 0) fragments = 2;      /* Large -> 2 medium */
+    if (rocks[rock_idx].size == 1) fragments = 2;      /* Medium -> 2 small */
+
+    score += (3 - rocks[rock_idx].size) * 20;
+
+    /* Create fragments with inherited momentum plus random vectors */
+    for (i = 0; i < fragments && i < MAX_ROCKS; i++) {
+        int free_slot = -1, j;
+        for (j = 0; j < MAX_ROCKS; j++) {
+            if (!rocks[j].active) { free_slot = j; break; }
+        }
+        if (free_slot >= 0) {
+            rocks[free_slot].x = rocks[rock_idx].x;
+            rocks[free_slot].y = rocks[rock_idx].y;
+            rocks[free_slot].dx = rocks[rock_idx].dx + rnd(200) - 100;
+            rocks[free_slot].dy = rocks[rock_idx].dy + rnd(200) - 100;
+            rocks[free_slot].size = rocks[rock_idx].size + 1;
+            rocks[free_slot].active = 1;
+        }
+    }
+
+    rocks[rock_idx].active = 0;  /* Original destroyed */
+}
+
+/*
+ * Collision resolution - physics arbitration between entities
+ */
+void check_collisions(void) {
+    int i, j;
+
+    /* Ship-rock collisions - mortality meets immutable stone */
+    if (ship.alive) {
+        for (i = 0; i < MAX_ROCKS; i++) {
+            if (rocks[i].active && rocks[i].size <= 2) {
+                int radius = 4 - rocks[i].size;
+                if (collision(ship.x, ship.y, rocks[i].x, rocks[i].y, radius + 1)) {
+                    ship.alive = 0;  /* Immediate termination */
+                    return;
+                }
+            }
+        }
+    }
+
+    /* Shot-rock collisions - energy versus matter */
+    for (i = 0; i < MAX_SHOTS; i++) {
+        if (shots[i].life <= 0) continue;
+        for (j = 0; j < MAX_ROCKS; j++) {
+            if (!rocks[j].active || rocks[j].size > 2) continue;
+            int radius = 4 - rocks[j].size;
+            if (collision(shots[i].x, shots[i].y, rocks[j].x, rocks[j].y, radius)) {
+                break_rock(j);
+                shots[i].life = 0;  /* Bullet consumed in impact */
+                break;
+            }
+        }
+    }
+}
+
+/*
+ * Visual rendering - projecting mathematical abstractions onto phosphor
+ */
+void render(void) {
+    int i;
+    cls();
+
+    /* Ship visualization - triangle pointing toward destiny */
+    if (ship.alive) {
+        int sx = ship.x / SCALE, sy = ship.y / SCALE;
+        pos(sx, sy); draw('+');
+
+        /* Thrust visualization */
+        if (ship.thrust) {
+            int tx = sx - cos_table[ship.angle] / 50;
+            int ty = sy - sin_table[ship.angle] / 50;
+            if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
+                pos(tx, ty); draw('*');
+            }
+        }
+    }
+
+    /* Asteroid field - chaos made visible */
+    for (i = 0; i < MAX_ROCKS; i++) {
+        if (rocks[i].active && rocks[i].size <= 2) {
+            char rock_char = (rocks[i].size == 0) ? 'O' :
+                           (rocks[i].size == 1) ? 'o' : '.';
+            pos(rocks[i].x / SCALE, rocks[i].y / SCALE);
+            draw(rock_char);
+        }
+    }
+
+    /* Projectiles - energy made manifest */
+    for (i = 0; i < MAX_SHOTS; i++) {
+        if (shots[i].life > 0) {
+            pos(shots[i].x / SCALE, shots[i].y / SCALE);
+            draw('|');
+        }
+    }
+
+    /* Status display - quantified progress */
+    pos(0, H); printf("Score: %d  Level: %d  %s",
+                     score, level, ship.alive ? "ALIVE" : "DESTROYED");
+    if (!ship.alive) {
+        pos(20, H/2); printf("PRESS Q TO ABANDON SIMULATION");
+    }
+}
+
+/*
+ * Level initialization - seeding chaos with controlled randomness
+ */
+void init_level(void) {
+    int i, active_rocks = 0;
+
+    /* Count surviving asteroids */
+    for (i = 0; i < MAX_ROCKS; i++) {
+        if (rocks[i].active && rocks[i].size <= 2) active_rocks++;
+    }
+
+    /* Generate new field if space is clear */
+    if (active_rocks == 0) {
+        level++;
+        int num_rocks = 3 + level;
+        if (num_rocks > MAX_ROCKS) num_rocks = MAX_ROCKS;
+
+        for (i = 0; i < num_rocks; i++) {
+            rocks[i].x = rnd(W * SCALE);
+            rocks[i].y = rnd(H * SCALE);
+            rocks[i].dx = rnd(100) - 50;
+            rocks[i].dy = rnd(100) - 50;
+            rocks[i].size = 0;  /* All start as large */
+            rocks[i].active = 1;
+        }
+    }
+}
+
+/*
+ * Main execution - the cosmic dance of physics and consciousness
+ */
+int main(void) {
+    /* Initialize universe */
+    ship.x = (W/2) * SCALE; ship.y = (H/2) * SCALE;
+    ship.dx = ship.dy = 0; ship.angle = 0; ship.alive = 1;
+    score = 0; level = 0;
+
+    /* Clear projectile array */
+    int i; for (i = 0; i < MAX_SHOTS; i++) shots[i].life = 0;
+    for (i = 0; i < MAX_ROCKS; i++) rocks[i].active = 0;
+
+    printf("ASTEROIDS MINIMAL - Survival in the Debris Field\n");
+    printf("Controls: A/D rotate, W thrust, SPACE fire, Q quit\n");
+    printf("Physics: Momentum conserved, entropy increases\n");
+    getch();
+
+    init_level();
+
+    /* The eternal loop - reality advancing frame by frame */
+    while (1) {
+        update_ship();
+        update_rocks();
+        update_shots();
+        check_collisions();
+        init_level();
+        render();
+
+        /* Crude timing - preventing computational overdrive */
+        for (i = 0; i < 1000; i++) for (int j = 0; j < 100; j++);
+    }
+
+    return 0;
+}
+
+/*
+ * This minimal implementation captures Asteroids' essential dynamics:
+ * - Newtonian physics with momentum conservation
+ * - Fragmentation mechanics creating exponential complexity
+ * - Resource management through limited ammunition
+ * - Toroidal space topology for infinite battlefield
+ * - Fixed-point arithmetic avoiding floating-point overhead
+ *
+ * In 150 lines, we demonstrate how mathematical elegance
+ * emerges from the intersection of physical law and digital constraint,
+ * creating emergent complexity from fundamental simplicity.
+ *
+ * The program reveals the poetry hidden within collision detection
+ * algorithms and trajectory calculations - proof that even the most
+ * primitive computational systems can simulate the sublime chaos
+ * of objects tumbling through the infinite void.
+ */

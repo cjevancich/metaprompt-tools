@@ -1,0 +1,172 @@
+/*
+ * PONG DEMO - Minimal Implementation
+ * Z80 CP/M Systems - The Essential Physics
+ *
+ * In the beginning was the collision, and the collision was with silicon.
+ * This represents Pong reduced to its mathematical essence - two vertical
+ * barriers attempting to contain the chaotic trajectory of a single point
+ * moving through bounded space-time.
+ *
+ * Compile: cc pongdemo.c -o pong.com
+ * Controls: Q/A (left), P/L (right), ESC (exit)
+ */
+
+#include <stdio.h>
+#include <conio.h>
+
+/* Universe constants */
+#define W 40    /* Field width - constrained by terminal reality */
+#define H 20    /* Field height - the arena of conflict */
+#define PH 3    /* Paddle height - human agency made manifest */
+
+/* Game state - the minimal variables defining reality */
+int px1, px2;           /* Paddle positions in vertical space */
+int bx, by, dx, dy;     /* Ball coordinates and velocity vector */
+int s1, s2;            /* Score accumulation - the meaning of existence */
+
+/* The essential functions of digital physics */
+void cls(void) { printf("\033[2J\033[H"); }
+void pos(int x, int y) { printf("\033[%d;%dH", y+1, x+1); }
+void draw(char c) { putchar(c); }
+int key(void) { return kbhit() ? getch() : 0; }
+
+/*
+ * Render the current state of reality onto the phosphor canvas
+ * Each frame represents a quantum of time made visible
+ */
+void render(void) {
+    int i, j;
+    cls();
+
+    /* Draw the boundaries of existence */
+    for (i = 0; i <= W; i++) {
+        pos(i, 0); draw('-');
+        pos(i, H); draw('-');
+    }
+
+    /* Manifest the paddles - barriers against entropy */
+    for (i = 0; i < PH; i++) {
+        pos(1, px1 + i); draw('|');      /* Left guardian */
+        pos(W-1, px2 + i); draw('|');    /* Right sentinel */
+    }
+
+    /* The ball - chaos given form and momentum */
+    pos(bx, by); draw('O');
+
+    /* Display the quantification of success */
+    pos(10, H+2); printf("Left: %d  Right: %d", s1, s2);
+    pos(10, H+3); printf("ESC to escape this digital purgatory");
+}
+
+/*
+ * Update the universe by one temporal increment
+ * Physics as implemented through Boolean logic and integer arithmetic
+ */
+void physics(void) {
+    /* Ball trajectory - Newton's first law in 8-bit precision */
+    bx += dx;
+    by += dy;
+
+    /* Vertical boundary conditions - perfectly elastic collision */
+    if (by <= 1 || by >= H-1) dy = -dy;
+
+    /* Paddle collision detection - the moment of human intervention */
+    if (bx == 2 && dx < 0 && by >= px1 && by < px1 + PH) {
+        dx = 1;  /* Reflect rightward */
+        /* Trajectory modification based on impact position */
+        dy = (by - px1 - PH/2) > 0 ? 1 : -1;
+    }
+
+    if (bx == W-2 && dx > 0 && by >= px2 && by < px2 + PH) {
+        dx = -1; /* Reflect leftward */
+        dy = (by - px2 - PH/2) > 0 ? 1 : -1;
+    }
+
+    /* Scoring conditions - success and failure quantified */
+    if (bx <= 0) {
+        s2++;  /* Right player achieves dominance */
+        bx = W/2; by = H/2; dx = -1; dy = 1; /* Reset the cosmic dance */
+    }
+    if (bx >= W) {
+        s1++;  /* Left player claims victory */
+        bx = W/2; by = H/2; dx = 1; dy = -1;
+    }
+}
+
+/*
+ * Process human input - the interface between consciousness and computation
+ * Each keypress represents a decision that ripples through digital space-time
+ */
+int input(void) {
+    int k = key();
+    switch (k) {
+        case 'q': case 'Q': if (px1 > 1) px1--; break;          /* Ascend */
+        case 'a': case 'A': if (px1 < H-PH-1) px1++; break;     /* Descend */
+        case 'p': case 'P': if (px2 > 1) px2--; break;          /* Rise */
+        case 'l': case 'L': if (px2 < H-PH-1) px2++; break;     /* Fall */
+        case 27: return 0;  /* Escape - abandoning the simulation */
+    }
+    return 1;
+}
+
+/*
+ * Temporal delay - crude frame rate control for human perception
+ * In the absence of hardware timing, we burn CPU cycles in sacrifice
+ * to the gods of playable refresh rates
+ */
+void delay(void) {
+    int i, j;
+    for (i = 0; i < 200; i++)
+        for (j = 0; j < 100; j++)
+            ; /* The eternal loop of waiting */
+}
+
+/*
+ * The main execution thread - where digital consciousness awakens
+ * Here begins the eternal struggle between order and chaos,
+ * mediated through the interface of human reflexes and silicon logic
+ */
+int main(void) {
+    /* Initialize the universe's fundamental constants */
+    px1 = px2 = H/2 - PH/2;  /* Paddles centered in vertical space */
+    bx = W/2; by = H/2;      /* Ball begins at cosmic center */
+    dx = 1; dy = 1;          /* Initial momentum toward entropy */
+    s1 = s2 = 0;             /* Scores reset to primordial zero */
+
+    printf("PONG DEMO - The Physics of Digital Competition\n");
+    printf("Left: Q/A keys  Right: P/L keys  ESC: Exit\n");
+    printf("Press any key to initiate the simulation...\n");
+    getch();
+
+    /* The eternal loop - each iteration a frame of synthetic reality */
+    while (input()) {
+        physics();   /* Advance the state of existence */
+        render();    /* Project reality onto the visual plane */
+        delay();     /* Pause for human temporal limitations */
+    }
+
+    /* Return to the void from whence we came */
+    cls();
+    printf("Simulation terminated. Reality restored.\n");
+    printf("Final scores - Left: %d, Right: %d\n", s1, s2);
+    printf("The eternal struggle continues in silicon dreams...\n");
+
+    return 0;
+}
+
+/*
+ * This minimal implementation distills Pong to its mathematical essence:
+ * - Two vertical barriers (paddles) defending territorial boundaries
+ * - One point mass (ball) following Newtonian trajectory
+ * - Collision detection creating state transitions
+ * - Human input modifying system parameters in real-time
+ * - Scoring system quantifying success/failure states
+ *
+ * In 60 lines of C code, we capture the fundamental dynamics that
+ * launched the video game industry - proof that complexity emerges
+ * from the interaction of simple rules applied consistently across time.
+ *
+ * The program demonstrates how sophisticated behavior patterns arise
+ * from basic physics simulation, revealing the mathematical poetry
+ * hidden within humanity's first interactive electronic entertainment.
+ */

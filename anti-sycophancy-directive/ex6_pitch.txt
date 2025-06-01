@@ -1,0 +1,35 @@
+# THE PATTERN THRONE
+## A Strategic Fantasy Game for 8-bit Microcomputers
+
+### The Proposition
+
+The Amber Throne stands empty. Nine Noble Houses vie for succession, each wielding fragments of Pattern-walking—the ability to perceive and reshape reality's underlying structure. You are Kaelan, seventh child of House Mirrors, trained to see beyond surface truth into the geometric foundations of existence itself.
+
+The negotiation unfolded like a delicate chess match, each participant simultaneously aware of multiple layers of meaning. Political survival requires understanding that power flows not through force, but through the manipulation of others' perceptions of reality.
+
+### Technical Architecture
+- **Platforms:** Apple II, TRS-80, Commodore PET
+- **Memory:** 48K RAM
+- **Interface:** Text-based with strategic ASCII Pattern diagrams
+- **Storage:** Dual 5.25" floppies for world persistence
+
+### Core Mechanics
+
+**Pattern-Walking System:** Each House interprets reality through distinct philosophical frameworks. House Meridian sees mathematical precision; House Vesper trusts emotional intuition; House Terminus views existence as narrative construction. Success demands genuine comprehension of these worldviews, not mere option selection.
+
+**Council Chamber Politics:** The central interface presents the Great Council where succession debates unfold through sophisticated rhetoric tracking logical consistency, emotional resonance, and strategic timing. Players must read between diplomatic language while concealing their own agenda.
+
+**Reality Consensus Engine:** Choices don't merely trigger outcomes—they determine which version of reality becomes dominant. The game tracks philosophical commitments across hundreds of decisions, constructing coherent worldviews that influence available solutions in later scenarios.
+
+### The Paradox of Power
+
+He recognized the fundamental paradox of human perception: every observation changes the observed system. As players approach the throne, they discover ultimate authority brings ultimate isolation. Victory requires synthesizing competing worldviews into ontological frameworks all Houses can accept—negotiating not merely political agreements, but the basic nature of existence itself.
+
+### Market Position
+
+Target audience: Sophisticated computer users seeking interactive literature that challenges assumptions about reality, power, and moral responsibility. The game transforms the microprocessor from business tool into instrument of philosophical inquiry, demonstrating how technology might serve genuine consciousness expansion.
+
+**Development Timeline:** 18 months, Christmas 1981 release
+**Projected Retail:** $59.95
+
+*The marriage of computational possibility with mythic narrative tradition creates new forms of wisdom for those willing to engage deeply with existence's fundamental questions.*
